@@ -69,7 +69,7 @@ public struct MRZCode: Sendable, Hashable {
         isOCRCorrectionEnabled: Bool
     ) {
         @Dependency(\.mrzCodeCreator) var mrzCodeCreator
-        guard let code = mrzCodeCreator.create(mrzLines: mrzLines, isOCRCorrectionEnabled: isOCRCorrectionEnabled) else {
+        guard let code = mrzCodeCreator.create(mrzLines, isOCRCorrectionEnabled) else {
             return nil
         }
 

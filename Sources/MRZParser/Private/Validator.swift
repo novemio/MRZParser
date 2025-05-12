@@ -6,14 +6,29 @@
 //
 
 import Dependencies
-import DependenciesMacros
 import Foundation
 
-@DependencyClient
+//@DependencyClient
+//struct Validator: Sendable {
+//    var isCompositionValid: @Sendable (_ validatedFields: [any FieldProtocol], _ finalCheckDigit: Int) -> Bool = { _, _ in false }
+//    var isValueValid: @Sendable (_ rawValue: String, _ checkDigit: Int) -> Bool = { _, _ in false }
+//    var isContentTypeValid: @Sendable (_ value: String, _ contentType: FieldType.ContentType) -> Bool = { _, _ in false }
+//}
+
 struct Validator: Sendable {
-    var isCompositionValid: @Sendable (_ validatedFields: [any FieldProtocol], _ finalCheckDigit: Int) -> Bool = { _, _ in false }
-    var isValueValid: @Sendable (_ rawValue: String, _ checkDigit: Int) -> Bool = { _, _ in false }
-    var isContentTypeValid: @Sendable (_ value: String, _ contentType: FieldType.ContentType) -> Bool = { _, _ in false }
+    let isCompositionValid: @Sendable (_ validatedFields: [any FieldProtocol], _ finalCheckDigit: Int) -> Bool
+    let isValueValid: @Sendable (_ rawValue: String, _ checkDigit: Int) -> Bool
+    let isContentTypeValid: @Sendable (_ value: String, _ contentType: FieldType.ContentType) -> Bool
+
+    init(
+        isCompositionValid: @escaping @Sendable (_ validatedFields: [any FieldProtocol], _ finalCheckDigit: Int) -> Bool = { _, _ in false },
+        isValueValid: @escaping @Sendable (_ rawValue: String, _ checkDigit: Int) -> Bool = { _, _ in false },
+        isContentTypeValid: @escaping @Sendable (_ value: String, _ contentType: FieldType.ContentType) -> Bool = { _, _ in false }
+    ) {
+        self.isCompositionValid = isCompositionValid
+        self.isValueValid = isValueValid
+        self.isContentTypeValid = isContentTypeValid
+    }
 }
 
 extension Validator: DependencyKey {

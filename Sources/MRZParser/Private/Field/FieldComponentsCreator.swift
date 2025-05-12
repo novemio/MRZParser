@@ -6,19 +6,41 @@
 //
 
 import Dependencies
-import DependenciesMacros
 import Foundation
 
-@DependencyClient
+//@DependencyClient
+//struct FieldComponentsCreator: Sendable {
+//    var getRawValueAndCheckDigit: @Sendable (
+//        _ lines: [String],
+//        _ position: FieldType.FieldPosition,
+//        _ contentType: FieldType.ContentType,
+//        _ shouldValidateCheckDigit: Bool,
+//        _ isOCRCorrectionEnabled: Bool
+//    ) -> (String, Int?)?
+//}
+
 struct FieldComponentsCreator: Sendable {
-    var getRawValueAndCheckDigit: @Sendable (
+    let getRawValueAndCheckDigit: @Sendable (
         _ lines: [String],
         _ position: FieldType.FieldPosition,
         _ contentType: FieldType.ContentType,
         _ shouldValidateCheckDigit: Bool,
         _ isOCRCorrectionEnabled: Bool
     ) -> (String, Int?)?
+
+    init(
+        getRawValueAndCheckDigit: @escaping @Sendable (
+            _ lines: [String],
+            _ position: FieldType.FieldPosition,
+            _ contentType: FieldType.ContentType,
+            _ shouldValidateCheckDigit: Bool,
+            _ isOCRCorrectionEnabled: Bool
+        ) -> (String, Int?)?
+    ) {
+        self.getRawValueAndCheckDigit = getRawValueAndCheckDigit
+    }
 }
+
 
 extension FieldComponentsCreator: DependencyKey {
     static var liveValue: Self {
@@ -39,7 +61,7 @@ extension FieldComponentsCreator: DependencyKey {
                 let correctedValue = {
                     if isOCRCorrectionEnabled {
                         @Dependency(\.ocrCorrector) var ocrCorrector
-                        return ocrCorrector.correct(string: value, contentType: .digits)
+                        return ocrCorrector.correct(value, .digits)
                     } else {
                         return value
                     }
@@ -58,15 +80,15 @@ extension FieldComponentsCreator: DependencyKey {
             }
 
             @Dependency(\.validator) var validator
-            if !validator.isValueValid(rawValue: rawValue, checkDigit: checkDigit) {
+            if !validator.isValueValid(rawValue, checkDigit) {
                 if isOCRCorrectionEnabled, contentType == .mixed {
                     @Dependency(\.ocrCorrector) var ocrCorrector
-                    guard let bruteForcedString = ocrCorrector.findMatchingStrings(strings: [rawValue], isCorrectCombination: {
+                    guard let bruteForcedString = ocrCorrector.findMatchingStrings( [rawValue],  {
                         guard let currentString = $0.first else {
                             return false
                         }
 
-                        return validator.isValueValid(rawValue: currentString, checkDigit: checkDigit)
+                        return validator.isValueValid( currentString,  checkDigit)
                     })?.first else {
                         return nil
                     }
@@ -92,14 +114,14 @@ extension FieldComponentsCreator: DependencyKey {
             let correctedValue = {
                 if isOCRCorrectionEnabled {
                     @Dependency(\.ocrCorrector) var ocrCorrector
-                    return ocrCorrector.correct(string: value, contentType: contentType)
+                    return ocrCorrector.correct( value,  contentType)
                 } else {
                     return value
                 }
             }()
 
             @Dependency(\.validator) var validator
-            guard validator.isContentTypeValid(value: correctedValue, contentType: contentType) else {
+            guard validator.isContentTypeValid( correctedValue,  contentType) else {
                 return nil
             }
 
@@ -141,6 +163,8 @@ extension DependencyValues {
 
 #if DEBUG
 extension FieldComponentsCreator: TestDependencyKey {
-    static let testValue = Self()
+    static let testValue = Self(
+        getRawValueAndCheckDigit: { _, _, _, _, _ in nil }
+    )
 }
 #endif

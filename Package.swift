@@ -22,10 +22,6 @@ let package = Package(
                     name: "Dependencies",
                     package: "swift-dependencies"
                 ),
-                .product(
-                    name: "DependenciesMacros",
-                    package: "swift-dependencies"
-                )
             ]),
         .testTarget(
             name: "MRZParserTests",

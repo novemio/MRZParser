@@ -6,11 +6,18 @@
 //
 
 import Dependencies
-import DependenciesMacros
 
-@DependencyClient
+
+//@DependencyClient
+//struct MRZCodeCreator: Sendable {
+//    var create: @Sendable (_ mrzLines: [String], _ isOCRCorrectionEnabled: Bool) -> MRZCode?
+//}
+
 struct MRZCodeCreator: Sendable {
-    var create: @Sendable (_ mrzLines: [String], _ isOCRCorrectionEnabled: Bool) -> MRZCode?
+    let create: @Sendable (_ mrzLines: [String], _ isOCRCorrectionEnabled: Bool) -> MRZCode?
+    init(create: @escaping @Sendable (_ mrzLines: [String], _ isOCRCorrectionEnabled: Bool) -> MRZCode?) {
+        self.create = create
+    }
 }
 
 extension MRZCodeCreator: DependencyKey {
@@ -56,12 +63,12 @@ extension MRZCodeCreator: DependencyKey {
             let fieldsToValidate = LockIsolated(fieldsToValidate)
 
             @Dependency(\.validator) var validator
-            if !validator.isCompositionValid(validatedFields: fieldsToValidate.value, finalCheckDigit: finalCheckDigit) {
+            if !validator.isCompositionValid(fieldsToValidate.value, finalCheckDigit){
                 if isOCRCorrectionEnabled {
                     let fieldsToBruteForce = fieldsToValidate.value.filter { $0.type.contentType(isRussianNationalPassport: isRussianNationalPassport) == .mixed }
                     // TODO: Do not bruteforce check digit
                     @Dependency(\.ocrCorrector) var ocrCorrector
-                    guard let updatedFields = ocrCorrector.findMatchingStrings(strings: fieldsToBruteForce.map(\.rawValue), isCorrectCombination: { combination in
+                    guard let updatedFields = ocrCorrector.findMatchingStrings( fieldsToBruteForce.map(\.rawValue),  { combination in
                         combination.enumerated().forEach { index, element in
                             guard let value = element.fieldValue else {
                                 assertionFailure("Can not be nil")
@@ -83,7 +90,7 @@ extension MRZCodeCreator: DependencyKey {
                             fieldsToValidate.withValue { $0[index] = field }
                         }
 
-                        return validator.isCompositionValid(validatedFields: fieldsToValidate.value, finalCheckDigit: finalCheckDigit)
+                        return validator.isCompositionValid( fieldsToValidate.value,  finalCheckDigit)
                     }) else {
                         return nil
                     }
@@ -117,97 +124,96 @@ extension MRZCodeCreator: DependencyKey {
                 guard let format = createMRZFormat(from: mrzLines) else { return nil }
 
                 @Dependency(\.fieldCreator) var fieldCreator
-
                 guard
                     let documentType = fieldCreator.createCharacterField(
-                        lines: mrzLines,
-                        format: format,
-                        type: .documentType,
-                        isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                         mrzLines,
+                         format,
+                         .documentType,
+                         isOCRCorrectionEnabled
                     ).map({ MRZCode.DocumentType(identifier: $0.value) }),
                     let issuingCountry = fieldCreator.createStringField(
-                        lines: mrzLines,
-                        format: format,
-                        type: .issuingCountryCode,
-                        isRussianNationalPassport: false,
-                        isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                         mrzLines,
+                         format,
+                         .issuingCountryCode,
+                         false,
+                         isOCRCorrectionEnabled
                     ).map({ MRZCode.Country(identifier: $0.value) }),
                     let birthdateField = fieldCreator.createDateField(
-                        lines: mrzLines,
-                        format: format,
-                        dateFieldType: .birth,
-                        isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                         mrzLines,
+                         format,
+                         .birth,
+                         isOCRCorrectionEnabled
                     ),
                     let sexField = fieldCreator.createCharacterField(
-                        lines: mrzLines,
-                        format: format,
-                        type: .sex,
-                        isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                         mrzLines,
+                         format,
+                         .sex,
+                         isOCRCorrectionEnabled
                     )
                 else {
                     return nil
                 }
 
                 let documentSubtype = fieldCreator.createCharacterField(
-                    lines: mrzLines,
-                    format: format,
-                    type: .documentSubtype,
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                     mrzLines,
+                     format,
+                     .documentSubtype,
+                     isOCRCorrectionEnabled
                 ).map { MRZCode.DocumentSubtype(identifier: $0.value) }
 
                 let isRussianNationalPassport = documentType == .passport && documentSubtype == .national && issuingCountry == .russia
 
                 var optionalDataField = fieldCreator.createStringField(
-                    lines: mrzLines,
-                    format: format,
-                    type: .optionalData(.one),
-                    isRussianNationalPassport: isRussianNationalPassport,
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                     mrzLines,
+                     format,
+                     .optionalData(.one),
+                     isRussianNationalPassport,
+                     isOCRCorrectionEnabled
                 )
 
                 guard
                     let nameField = fieldCreator.createNameField(
-                        lines: mrzLines,
-                        format: format,
-                        isRussianNationalPassport: isRussianNationalPassport,
-                        isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                         mrzLines,
+                         format,
+                         isRussianNationalPassport,
+                         isOCRCorrectionEnabled
                     ),
                     var documentNumberField = fieldCreator.createDocumentNumberField(
-                        lines: mrzLines,
-                        format: format,
-                        russianNationalPassportHiddenCharacter: isRussianNationalPassport ? optionalDataField?.value.first : nil,
-                        isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                         mrzLines,
+                         format,
+                         isRussianNationalPassport ? optionalDataField?.value.first : nil,
+                         isOCRCorrectionEnabled
                     ),
                     let nationalityField = fieldCreator.createStringField(
-                        lines: mrzLines,
-                        format: format,
-                        type: .nationalityCountryCode,
-                        isRussianNationalPassport: isRussianNationalPassport,
-                        isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                         mrzLines,
+                         format,
+                         .nationalityCountryCode,
+                         isRussianNationalPassport,
+                         isOCRCorrectionEnabled
                     )
                 else {
                     return nil
                 }
 
                 let expiryDateField = fieldCreator.createDateField(
-                    lines: mrzLines,
-                    format: format,
-                    dateFieldType: .expiry,
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                     mrzLines,
+                     format,
+                     .expiry,
+                     isOCRCorrectionEnabled
                 )
 
                 var optionalData2Field = fieldCreator.createStringField(
-                    lines: mrzLines,
-                    format: format,
-                    type: .optionalData(.two),
-                    isRussianNationalPassport: isRussianNationalPassport,
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                     mrzLines,
+                     format,
+                .optionalData(.two),
+                isRussianNationalPassport,
+                  isOCRCorrectionEnabled
                 )
 
                 let finalCheckDigitField = fieldCreator.createFinalCheckDigitField(
-                    lines: mrzLines,
-                    format: format,
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                    mrzLines,
+                  format,
+                    isOCRCorrectionEnabled
                 )
 
                 if let finalCheckDigitField {
@@ -291,6 +297,8 @@ extension DependencyValues {
 
 #if DEBUG
 extension MRZCodeCreator: TestDependencyKey {
-    static let testValue = Self()
+    static let testValue = Self(
+        create: { _, _ in nil }
+    )
 }
 #endif

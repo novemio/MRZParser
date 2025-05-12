@@ -6,12 +6,25 @@
 //
 
 import Dependencies
-import DependenciesMacros
 
-@DependencyClient
+
+//@DependencyClient
+//struct OCRCorrector: Sendable {
+//    var correct: @Sendable (_ string: String, _ contentType: FieldType.ContentType) -> String = { _, _ in "" }
+//    var findMatchingStrings: @Sendable (_ strings: [String], _ isCorrectCombination: @Sendable ([String]) -> Bool) -> [String]?
+//}
+
 struct OCRCorrector: Sendable {
-    var correct: @Sendable (_ string: String, _ contentType: FieldType.ContentType) -> String = { _, _ in "" }
-    var findMatchingStrings: @Sendable (_ strings: [String], _ isCorrectCombination: @Sendable ([String]) -> Bool) -> [String]?
+    let correct: @Sendable (_ string: String, _ contentType: FieldType.ContentType) -> String
+    let findMatchingStrings: @Sendable (_ strings: [String], _ isCorrectCombination: @Sendable ([String]) -> Bool) -> [String]?
+
+    init(
+        correct: @escaping @Sendable (_ string: String, _ contentType: FieldType.ContentType) -> String = { _, _ in "" },
+        findMatchingStrings: @escaping @Sendable (_ strings: [String], _ isCorrectCombination: @Sendable ([String]) -> Bool) -> [String]?
+    ) {
+        self.correct = correct
+        self.findMatchingStrings = findMatchingStrings
+    }
 }
 
 extension OCRCorrector: DependencyKey {
@@ -104,6 +117,9 @@ extension DependencyValues {
 
 #if DEBUG
 extension OCRCorrector: TestDependencyKey {
-    static let testValue = Self()
+    static let testValue = Self(
+        correct: { _, _ in "" },
+        findMatchingStrings: { _, _ in nil }
+    )
 }
 #endif

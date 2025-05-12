@@ -6,12 +6,19 @@
 //
 
 import Dependencies
-import DependenciesMacros
 import Foundation
 
-@DependencyClient
+//@DependencyClient
+//struct CyrillicNameConverter: Sendable {
+//    var convert: @Sendable (_ name: String, _ isOCRCorrectionEnabled: Bool) -> String = { _, _  in "" }
+//}
 struct CyrillicNameConverter: Sendable {
-    var convert: @Sendable (_ name: String, _ isOCRCorrectionEnabled: Bool) -> String = { _, _  in "" }
+    let convert: @Sendable (_ name: String, _ isOCRCorrectionEnabled: Bool) -> String
+    init(
+        convert: @escaping @Sendable (_ name: String, _ isOCRCorrectionEnabled: Bool) -> String = { _, _ in "" }
+    ) {
+        self.convert = convert
+    }
 }
 
 extension CyrillicNameConverter: DependencyKey {
@@ -60,7 +67,7 @@ extension CyrillicNameConverter: DependencyKey {
             if isOCRCorrectionEnabled {
                 // Correct digits to english letters
                 @Dependency(\.ocrCorrector) var ocrCorrector
-                let correctedName = ocrCorrector.correct(string: convertedName, contentType: .letters)
+                let correctedName = ocrCorrector.correct(convertedName, .letters)
                 // Correct english letters to cyrilic
                 return convert(correctedName)
             } else {
