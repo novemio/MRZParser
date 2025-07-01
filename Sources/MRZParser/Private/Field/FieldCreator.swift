@@ -21,6 +21,8 @@ struct FieldCreator: Sendable {
         _ lines: [String],
         _ format: MRZCode.Format,
         _ russianNationalPassportHiddenCharacter: Character?,
+        _ documentType: MRZCode.DocumentType,
+        _ issuingCountry: MRZCode.Country,
         _ isOCRCorrectionEnabled: Bool
     ) -> Field<String>?
     
@@ -63,6 +65,8 @@ struct FieldCreator: Sendable {
             _ lines: [String],
             _ format: MRZCode.Format,
             _ russianNationalPassportHiddenCharacter: Character?,
+            _ documentType: MRZCode.DocumentType,
+            _ issuingCountry: MRZCode.Country,
             _ isOCRCorrectionEnabled: Bool
         ) -> Field<String>?,
         createCharacterField: @escaping @Sendable (
@@ -108,30 +112,39 @@ extension FieldCreator: DependencyKey {
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
                 guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                     lines,
-                     position,
-                     type.contentType(isRussianNationalPassport: isRussianNationalPassport),
-                     type.shouldValidateCheckDigit(mrzFormat: format),
-                     isOCRCorrectionEnabled
+                    lines: lines,
+                    position: position,
+                    contentType: type.contentType(isRussianNationalPassport: isRussianNationalPassport),
+                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
+                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
                 ), let value = rawValue.fieldValue else {
                     return nil
                 }
 
                 return .init(value: value, rawValue: rawValue, checkDigit: checkDigit, type: type)
             },
-            createDocumentNumberField: { lines, format, russianNationalPassportHiddenCharacter, isOCRCorrectionEnabled in
-                        let type: FieldType = .documentNumber
-                        guard let position = type.position(for: format) else {
-                            assertionFailure("Document number position not found for format: \(format)")
-                            return nil
-                        }
+            createDocumentNumberField: { lines, format, russianNationalPassportHiddenCharacter, documentType, issuingCountry,  isOCRCorrectionEnabled in
+                let type: FieldType = .documentNumber
+                guard let position = type.position(for: format) else {
+                    assertionFailure("Document number position not found for format: \(format)")
+                    return nil
+                }
+
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
                 guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                     lines,
-                     position,
-                     type.contentType(isRussianNationalPassport: russianNationalPassportHiddenCharacter != nil),
-                     type.shouldValidateCheckDigit(mrzFormat: format),
-                     isOCRCorrectionEnabled
+                    lines: lines,
+                    position: position,
+                    contentType: type.contentType(isRussianNationalPassport: russianNationalPassportHiddenCharacter != nil),
+                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
+                    isOCRCorrectionEnabled: isOCRCorrectionEnabled,
+                    aditionalValidation: { value in
+                        print("Additional validation \(value)")
+                        let documentTypeString: String = String(documentType.identifier)
+                        let issuingCountryString: String = issuingCountry.identifier
+                        return  DocumentValidatorInt.validate(documentType:documentTypeString, issuingCountry: issuingCountryString, documentNumber: value)
+                        
+                    }
+
                 ), var value = rawValue.fieldValue else {
                     return nil
                 }
@@ -150,12 +163,12 @@ extension FieldCreator: DependencyKey {
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
                 guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                     lines,
-                     position,
+                    lines: lines,
+                    position: position,
                     // `isRussianNationalPassport` doesn't matter here
-                     type.contentType(isRussianNationalPassport: false),
-                     type.shouldValidateCheckDigit(mrzFormat: format),
-                     isOCRCorrectionEnabled
+                    contentType: type.contentType(isRussianNationalPassport: false),
+                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
+                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
                 ), let value = rawValue.fieldValue, let character = value.first else {
                     return nil
                 }
@@ -171,11 +184,11 @@ extension FieldCreator: DependencyKey {
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
                 guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                     lines,
-                     position,
-                     type.contentType(isRussianNationalPassport: isRussianNationalPassport),
-                     type.shouldValidateCheckDigit(mrzFormat: format),
-                     isOCRCorrectionEnabled
+                    lines: lines,
+                    position: position,
+                    contentType: type.contentType(isRussianNationalPassport: isRussianNationalPassport),
+                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
+                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
                 ) else {
                     return nil
                 }
@@ -239,12 +252,12 @@ extension FieldCreator: DependencyKey {
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
                 guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                     lines,
-                     position,
+                    lines: lines,
+                    position: position,
                     // `isRussianNationalPassport` doesn't matter here
-                     type.contentType(isRussianNationalPassport: false),
-                     type.shouldValidateCheckDigit(mrzFormat: format),
-                     isOCRCorrectionEnabled
+                    contentType: type.contentType(isRussianNationalPassport: false),
+                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
+                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
                 ), let dateValue = date(from: rawValue, dateFieldType: dateFieldType) else {
                     return nil
                 }
@@ -259,12 +272,12 @@ extension FieldCreator: DependencyKey {
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
                 guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                     lines,
-                     position,
+                    lines: lines,
+                    position: position,
                     // `isRussianNationalPassport` doesn't matter here
-                     type.contentType(isRussianNationalPassport: false),
-                     type.shouldValidateCheckDigit(mrzFormat: format),
-                     isOCRCorrectionEnabled
+                    contentType: type.contentType(isRussianNationalPassport: false),
+                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
+                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
                 ), let value = rawValue.fieldValue, let intValue = Int(value) else {
                     return nil
                 }
@@ -286,7 +299,7 @@ extension DependencyValues {
 extension FieldCreator: TestDependencyKey {
     static let testValue = Self(
         createStringField: { _, _, _, _, _ in nil },
-        createDocumentNumberField: { _, _, _, _ in nil },
+        createDocumentNumberField: { _, _, _, _, _,_ in nil },
         createCharacterField: { _, _, _, _ in nil },
         createNameField: { _, _, _, _ in nil },
         createDateField: { _, _, _, _ in nil },

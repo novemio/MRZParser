@@ -31,9 +31,11 @@ extension OCRCorrector: DependencyKey {
     static var liveValue: Self {
         @Sendable
         func correct(string: String, contentType: FieldType.ContentType) -> String {
+            print("MRZ Parser: Correcting string: \(string)  type \(contentType)")
+            var correctString: String = string
             switch contentType {
             case .digits:
-                return string
+                correctString = correctString
                     .replace("O", with: "0")
                     .replace("Q", with: "0")
                     .replace("U", with: "0")
@@ -42,17 +44,19 @@ extension OCRCorrector: DependencyKey {
                     .replace("Z", with: "2")
                     .replace("B", with: "8")
             case .letters:
-                return string
+                correctString =  correctString
                     .replace("0", with: "O")
                     .replace("1", with: "I")
                     .replace("2", with: "Z")
                     .replace("8", with: "B")
             case .sex:
-                return string
+                correctString = correctString
                     .replace("P", with: "F")
             case .mixed:
-                return string
+                correctString 
             }
+            print("MRZ Parser: Corrected \(correctString)")
+            return correctString;
         }
 
         return .init(
@@ -60,9 +64,10 @@ extension OCRCorrector: DependencyKey {
                 correct(string: string, contentType: contentType)
             },
             findMatchingStrings: { strings, isCorrectCombination in
+                
                 var result: [String]?
                 var stringsArray = strings.map { Array($0) }
-
+                print("MRZ Parser: findMatchingStrings: strings\(strings) stringsArray\(stringsArray)")
                 let getTransformedCharacters: (Character) -> [Character] = {
                     let digitsReplacedCharacter = Character(correct(string: String($0), contentType: .digits))
                     let lettersReplacedCharacter = Character(correct(string: String($0), contentType: .letters))
@@ -70,13 +75,17 @@ extension OCRCorrector: DependencyKey {
                 }
 
                 func dfs(index: Int) -> Bool {
+                    print("MRZ Parser: dfs: index \(index) ")
                     if index == stringsArray.count {
                         // If we've modified all strings, check the combination
                         let currentCombination = stringsArray.map { String($0) }
+         
                         if isCorrectCombination(currentCombination) {
                             result = currentCombination
+                            print("MRZ Parser: findMatchingStrings  TRUE result \(currentCombination) ")
                             return true
                         }
+                        print("MRZ Parser: findMatchingStrings result FALSE")
                         return false
                     }
 
@@ -86,7 +95,7 @@ extension OCRCorrector: DependencyKey {
 
                         // Generate replacements for the current character
                         let replacements = getTransformedCharacters(originalChar)
-
+                        print("MRZ Parser:  replacments \(replacements) result")
                         // Try each replacement character
                         for char in replacements {
                             stringsArray[index][i] = char
@@ -101,6 +110,7 @@ extension OCRCorrector: DependencyKey {
 
                     return false
                 }
+                
 
                 return dfs(index: 0) ? result : nil
             }

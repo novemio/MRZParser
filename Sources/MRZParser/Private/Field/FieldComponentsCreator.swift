@@ -20,25 +20,43 @@ import Foundation
 //}
 
 struct FieldComponentsCreator: Sendable {
-    let getRawValueAndCheckDigit: @Sendable (
+
+    let getRawValueAndCheckDigitWithAddition: @Sendable (
         _ lines: [String],
         _ position: FieldType.FieldPosition,
         _ contentType: FieldType.ContentType,
         _ shouldValidateCheckDigit: Bool,
-        _ isOCRCorrectionEnabled: Bool
+        _ isOCRCorrectionEnabled: Bool,
+        _ aditionalValidation: ((String) -> Bool)?
     ) -> (String, Int?)?
 
+
     init(
-        getRawValueAndCheckDigit: @escaping @Sendable (
+        getRawValueAndCheckDigitWithAddition: @escaping @Sendable (
             _ lines: [String],
             _ position: FieldType.FieldPosition,
             _ contentType: FieldType.ContentType,
             _ shouldValidateCheckDigit: Bool,
-            _ isOCRCorrectionEnabled: Bool
+            _ isOCRCorrectionEnabled: Bool,
+            _ aditionalValidation: ((String) -> Bool)?
         ) -> (String, Int?)?
     ) {
-        self.getRawValueAndCheckDigit = getRawValueAndCheckDigit
+        self.getRawValueAndCheckDigitWithAddition = getRawValueAndCheckDigitWithAddition
     }
+    
+    @Sendable
+    func getRawValueAndCheckDigit(
+          lines: [String],
+          position: FieldType.FieldPosition,
+          contentType: FieldType.ContentType,
+          shouldValidateCheckDigit: Bool,
+          isOCRCorrectionEnabled: Bool,
+          aditionalValidation: ((String) -> Bool)? = nil
+    ) -> (String, Int?)?{
+        
+        return getRawValueAndCheckDigitWithAddition(lines, position, contentType, shouldValidateCheckDigit, isOCRCorrectionEnabled, aditionalValidation)
+    }
+    
 }
 
 
@@ -50,8 +68,10 @@ extension FieldComponentsCreator: DependencyKey {
             rawValue: String,
             position: FieldType.FieldPosition,
             contentType: FieldType.ContentType,
-            isOCRCorrectionEnabled: Bool
+            isOCRCorrectionEnabled: Bool,
+            aditionalValidation: ((String) -> Bool)
         ) -> (String, Int)? {
+            print("MRZ PARSER: FieldComponentsCreator: Validate line: \(line) rawValue: \(rawValue)")
             func getCheckDigit(
                 from string: String,
                 endIndex: Int,
@@ -62,15 +82,16 @@ extension FieldComponentsCreator: DependencyKey {
                     if isOCRCorrectionEnabled {
                         @Dependency(\.ocrCorrector) var ocrCorrector
                         return ocrCorrector.correct(value, .digits)
+
                     } else {
                         return value
                     }
                 }()
-
+                
                 // Validation not needed because validated through Int initialiser
                 return Int(correctedValue)
             }
-
+            
             guard let checkDigit = getCheckDigit(
                 from: line,
                 endIndex: position.range.upperBound,
@@ -78,21 +99,24 @@ extension FieldComponentsCreator: DependencyKey {
             ) else {
                 return nil
             }
-
+            
             @Dependency(\.validator) var validator
-            if !validator.isValueValid(rawValue, checkDigit) {
+            if !validator.isValueValid( rawValue,  checkDigit) {
+                print("MRZ Parser: Validate: NOT VALID \(rawValue) ")
                 if isOCRCorrectionEnabled, contentType == .mixed {
                     @Dependency(\.ocrCorrector) var ocrCorrector
-                    guard let bruteForcedString = ocrCorrector.findMatchingStrings( [rawValue],  {
+                    print("MRZ Parser: Validate: bruteForce \(rawValue) ")
+                    guard let bruteForcedString = ocrCorrector.findMatchingStrings( [rawValue], {
                         guard let currentString = $0.first else {
                             return false
                         }
+                        print("MRZ Parser: Validate: isCorrectCombination \(currentString) ")
+                        return validator.isValueValid(currentString,checkDigit) && aditionalValidation(currentString)
 
-                        return validator.isValueValid( currentString,  checkDigit)
                     })?.first else {
                         return nil
                     }
-
+                    
                     return (bruteForcedString, checkDigit)
                 } else {
                     return nil
@@ -101,7 +125,7 @@ extension FieldComponentsCreator: DependencyKey {
                 return (rawValue, checkDigit)
             }
         }
-
+        
         @Sendable
         func getRawValue(
             from string: String,
@@ -110,7 +134,7 @@ extension FieldComponentsCreator: DependencyKey {
             isOCRCorrectionEnabled: Bool
         ) -> String? {
             let value = string.substring(range.lowerBound, to: range.upperBound - 1).uppercased()
-
+            print("MRZ Parser: getRawValue: RAW: \(value)")
             let correctedValue = {
                 if isOCRCorrectionEnabled {
                     @Dependency(\.ocrCorrector) var ocrCorrector
@@ -119,16 +143,16 @@ extension FieldComponentsCreator: DependencyKey {
                     return value
                 }
             }()
-
+            print("MRZ Parser: getRawValue: Corrected:\(correctedValue)")
             @Dependency(\.validator) var validator
             guard validator.isContentTypeValid( correctedValue,  contentType) else {
                 return nil
             }
-
+            
             return correctedValue
         }
-
-        return .init { lines, position, contentType, shouldValidateCheckDigit, isOCRCorrectionEnabled in
+        
+        return .init { lines, position, contentType, shouldValidateCheckDigit, isOCRCorrectionEnabled ,additionalValdiation in
             let line = lines[position.line]
             guard let rawValue = getRawValue(
                 from: line,
@@ -138,17 +162,18 @@ extension FieldComponentsCreator: DependencyKey {
             ) else {
                 return nil
             }
-
+            
             guard shouldValidateCheckDigit else {
                 return (rawValue, nil)
             }
-
+            
             return validate(
                 line: line,
                 rawValue: rawValue,
                 position: position,
                 contentType: contentType,
-                isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                isOCRCorrectionEnabled: isOCRCorrectionEnabled,
+                aditionalValidation: additionalValdiation ?? {value in return true }
             )
         }
     }
@@ -164,7 +189,7 @@ extension DependencyValues {
 #if DEBUG
 extension FieldComponentsCreator: TestDependencyKey {
     static let testValue = Self(
-        getRawValueAndCheckDigit: { _, _, _, _, _ in nil }
+        getRawValueAndCheckDigitWithAddition: { _, _, _, _, _, _ in nil }
     )
 }
 #endif
