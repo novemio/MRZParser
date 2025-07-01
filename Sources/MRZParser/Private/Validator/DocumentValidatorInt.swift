@@ -21,19 +21,19 @@ final class DocumentValidatorInt {
     
     // Validate document number for a given country
     static func validate(documentType:String, issuingCountry:String,documentNumber:String) -> Bool {
-        print("VALIDATOR \(documentNumber) in \(issuingCountry)")
+        MRZLogger.debug("VALIDATOR \(documentNumber) in \(issuingCountry)")
         
         
         if(!CountryCodes.isValidAlpha3(issuingCountry)){
             if(!CountryCodes.isValidAlpha2(issuingCountry)){
-                print("VALIDATOR: Country code is invalid \(issuingCountry)")
+                MRZLogger.debug("VALIDATOR: Country code is invalid \(issuingCountry)")
                 return false
             }
         }
         
         
         if (["I","C","A"].contains(documentType)) {
-            print("VALIDATOR \(documentNumber) in \(issuingCountry)")
+            MRZLogger.debug("VALIDATOR \(documentNumber) in \(issuingCountry)")
             // Normalize country code to uppercase
             let normalizedCountry = issuingCountry.uppercased()
             
@@ -50,10 +50,10 @@ final class DocumentValidatorInt {
                 let regex = try NSRegularExpression(pattern: pattern)
                 let range = NSRange(location: 0, length: documentNumber.utf16.count)
                 let result =  regex.firstMatch(in: documentNumber, options: [], range: range) != nil
-                print("VALIDATOR: result \(result)")
+                MRZLogger.debug("VALIDATOR: result \(result)")
                 return result;
             } catch {
-                print("VALIDATOR: Invalid regex pattern for country \(issuingCountry): \(pattern)")
+                MRZLogger.debug("VALIDATOR: Invalid regex pattern for country \(issuingCountry): \(pattern)")
                 return false
             }
         }else{

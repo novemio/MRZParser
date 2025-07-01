@@ -31,7 +31,7 @@ extension OCRCorrector: DependencyKey {
     static var liveValue: Self {
         @Sendable
         func correct(string: String, contentType: FieldType.ContentType) -> String {
-            print("MRZ Parser: Correcting string: \(string)  type \(contentType)")
+            MRZLogger.debug("MRZ Parser: Correcting string: \(string)  type \(contentType)")
             var correctString: String = string
             switch contentType {
             case .digits:
@@ -55,7 +55,7 @@ extension OCRCorrector: DependencyKey {
             case .mixed:
                 correctString 
             }
-            print("MRZ Parser: Corrected \(correctString)")
+            MRZLogger.debug("MRZ Parser: Corrected \(correctString)")
             return correctString;
         }
 
@@ -67,7 +67,7 @@ extension OCRCorrector: DependencyKey {
                 
                 var result: [String]?
                 var stringsArray = strings.map { Array($0) }
-                print("MRZ Parser: findMatchingStrings: strings\(strings) stringsArray\(stringsArray)")
+                MRZLogger.debug("MRZ Parser: findMatchingStrings: strings\(strings) stringsArray\(stringsArray)")
                 let getTransformedCharacters: (Character) -> [Character] = {
                     let digitsReplacedCharacter = Character(correct(string: String($0), contentType: .digits))
                     let lettersReplacedCharacter = Character(correct(string: String($0), contentType: .letters))
@@ -75,17 +75,17 @@ extension OCRCorrector: DependencyKey {
                 }
 
                 func dfs(index: Int) -> Bool {
-                    print("MRZ Parser: dfs: index \(index) ")
+                    MRZLogger.debug("MRZ Parser: dfs: index \(index) ")
                     if index == stringsArray.count {
                         // If we've modified all strings, check the combination
                         let currentCombination = stringsArray.map { String($0) }
          
                         if isCorrectCombination(currentCombination) {
                             result = currentCombination
-                            print("MRZ Parser: findMatchingStrings  TRUE result \(currentCombination) ")
+                            MRZLogger.debug("MRZ Parser: findMatchingStrings  TRUE result \(currentCombination) ")
                             return true
                         }
-                        print("MRZ Parser: findMatchingStrings result FALSE")
+                        MRZLogger.debug("MRZ Parser: findMatchingStrings result FALSE")
                         return false
                     }
 
@@ -95,7 +95,7 @@ extension OCRCorrector: DependencyKey {
 
                         // Generate replacements for the current character
                         let replacements = getTransformedCharacters(originalChar)
-                        print("MRZ Parser:  replacments \(replacements) result")
+                        MRZLogger.debug("MRZ Parser:  replacments \(replacements) result")
                         // Try each replacement character
                         for char in replacements {
                             stringsArray[index][i] = char

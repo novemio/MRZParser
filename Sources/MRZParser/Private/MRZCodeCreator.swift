@@ -61,16 +61,15 @@ extension MRZCodeCreator: DependencyKey {
             isOCRCorrectionEnabled: Bool
         ) -> [Field<String>]? {
             let fieldsToValidate = LockIsolated(fieldsToValidate)
-            print("MRZ Parser:: validateAndCorrectIfNeeded:")
+            MRZLogger.debug("MRZ Parser:: validateAndCorrectIfNeeded:")
             @Dependency(\.validator) var validator
             if !validator.isCompositionValid(fieldsToValidate.value, finalCheckDigit){
                 if isOCRCorrectionEnabled {
                     let fieldsToBruteForce = fieldsToValidate.value.filter { $0.type.contentType(isRussianNationalPassport: isRussianNationalPassport) == .mixed }
                     // TODO: Do not bruteforce check digit
                     @Dependency(\.ocrCorrector) var ocrCorrector
-
                     guard let updatedFields = ocrCorrector.findMatchingStrings(fieldsToBruteForce.map(\.rawValue), { combination in
-                        print("MRZ Parser: isCorrectCombination: \(combination)")
+                        MRZLogger.debug("MRZ Parser: isCorrectCombination: \(combination)")
                         combination.enumerated().forEach { index, element in
                             guard let value = element.fieldValue else {
                                 assertionFailure("Can not be nil")
@@ -181,12 +180,12 @@ extension MRZCodeCreator: DependencyKey {
                          isOCRCorrectionEnabled
                     ),
                     var documentNumberField = fieldCreator.createDocumentNumberField(
-                        lines: mrzLines,
-                        format: format,
-                        russianNationalPassportHiddenCharacter: isRussianNationalPassport ? optionalDataField?.value.first : nil,
-                        documentType: documentType,
-                        issuingCountry: issuingCountry,
-                        isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                         mrzLines,
+                         format,
+                         isRussianNationalPassport ? optionalDataField?.value.first : nil,
+                         documentType,
+                         issuingCountry,
+                         isOCRCorrectionEnabled
                     ),
                     let nationalityField = fieldCreator.createStringField(
                          mrzLines,
@@ -198,7 +197,7 @@ extension MRZCodeCreator: DependencyKey {
                 else {
                     return nil
                 }
-                print("DEBUG: validateAndCorrectIfNeeded documentNumberField: \(documentNumberField)")
+                MRZLogger.debug("DEBUG: validateAndCorrectIfNeeded documentNumberField: \(documentNumberField)")
 
                 let expiryDateField = fieldCreator.createDateField(
                      mrzLines,

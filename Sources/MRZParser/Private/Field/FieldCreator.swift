@@ -111,12 +111,13 @@ extension FieldCreator: DependencyKey {
                 }
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
-                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                    lines: lines,
-                    position: position,
-                    contentType: type.contentType(isRussianNationalPassport: isRussianNationalPassport),
-                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigitWithAddition(
+                     lines,
+                     position,
+                     type.contentType(isRussianNationalPassport: isRussianNationalPassport),
+                     type.shouldValidateCheckDigit(mrzFormat: format),
+                     isOCRCorrectionEnabled,
+                     nil
                 ), let value = rawValue.fieldValue else {
                     return nil
                 }
@@ -131,14 +132,14 @@ extension FieldCreator: DependencyKey {
                 }
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
-                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                    lines: lines,
-                    position: position,
-                    contentType: type.contentType(isRussianNationalPassport: russianNationalPassportHiddenCharacter != nil),
-                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled,
-                    aditionalValidation: { value in
-                        print("Additional validation \(value)")
+                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigitWithAddition(
+                     lines,
+                     position,
+                     type.contentType(isRussianNationalPassport: russianNationalPassportHiddenCharacter != nil),
+                     type.shouldValidateCheckDigit(mrzFormat: format),
+                     isOCRCorrectionEnabled,
+                     { value in
+                        MRZLogger.debug("Additional validation \(value)")
                         let documentTypeString: String = String(documentType.identifier)
                         let issuingCountryString: String = issuingCountry.identifier
                         return  DocumentValidatorInt.validate(documentType:documentTypeString, issuingCountry: issuingCountryString, documentNumber: value)
@@ -162,13 +163,14 @@ extension FieldCreator: DependencyKey {
                 }
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
-                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                    lines: lines,
-                    position: position,
+                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigitWithAddition(
+                     lines,
+                     position,
                     // `isRussianNationalPassport` doesn't matter here
-                    contentType: type.contentType(isRussianNationalPassport: false),
-                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                     type.contentType(isRussianNationalPassport: false),
+                     type.shouldValidateCheckDigit(mrzFormat: format),
+                     isOCRCorrectionEnabled,
+                     nil
                 ), let value = rawValue.fieldValue, let character = value.first else {
                     return nil
                 }
@@ -183,12 +185,13 @@ extension FieldCreator: DependencyKey {
                 }
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
-                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                    lines: lines,
-                    position: position,
-                    contentType: type.contentType(isRussianNationalPassport: isRussianNationalPassport),
-                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigitWithAddition(
+                     lines,
+                     position,
+                     type.contentType(isRussianNationalPassport: isRussianNationalPassport),
+                     type.shouldValidateCheckDigit(mrzFormat: format),
+                     isOCRCorrectionEnabled,
+                     nil
                 ) else {
                     return nil
                 }
@@ -251,13 +254,14 @@ extension FieldCreator: DependencyKey {
                 }
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
-                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                    lines: lines,
-                    position: position,
+                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigitWithAddition(
+                     lines,
+                     position,
                     // `isRussianNationalPassport` doesn't matter here
-                    contentType: type.contentType(isRussianNationalPassport: false),
-                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                     type.contentType(isRussianNationalPassport: false),
+                     type.shouldValidateCheckDigit(mrzFormat: format),
+                     isOCRCorrectionEnabled,
+                     nil
                 ), let dateValue = date(from: rawValue, dateFieldType: dateFieldType) else {
                     return nil
                 }
@@ -271,13 +275,14 @@ extension FieldCreator: DependencyKey {
                 }
 
                 @Dependency(\.fieldComponentsCreator) var fieldComponentsCreator
-                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigit(
-                    lines: lines,
-                    position: position,
+                guard let (rawValue, checkDigit) = fieldComponentsCreator.getRawValueAndCheckDigitWithAddition(
+                     lines,
+                     position,
                     // `isRussianNationalPassport` doesn't matter here
-                    contentType: type.contentType(isRussianNationalPassport: false),
-                    shouldValidateCheckDigit: type.shouldValidateCheckDigit(mrzFormat: format),
-                    isOCRCorrectionEnabled: isOCRCorrectionEnabled
+                     type.contentType(isRussianNationalPassport: false),
+                     type.shouldValidateCheckDigit(mrzFormat: format),
+                     isOCRCorrectionEnabled,
+                     nil
                 ), let value = rawValue.fieldValue, let intValue = Int(value) else {
                     return nil
                 }

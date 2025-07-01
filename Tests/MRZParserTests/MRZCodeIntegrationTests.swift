@@ -25,7 +25,7 @@ final class MRZCodeIntegrationTests: XCTestCase {
                 mrzLines: [],
                 isOCRCorrectionEnabled: true
             )
-            print(result ?? "nil")
+            MRZLogger.debug(result ?? "nil")
         }
     }
 }
